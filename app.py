@@ -36,6 +36,13 @@ def webhook():
 
 
 def processRequest(req):
+    return {
+        "speech": "Hello !",
+        "displayText": "Hello !",
+        # "data": data,
+        # "contextOut": [],
+        "source": "apiai-weather-webhook-sample"
+    }
     if req.get("result").get("action") != "yahooWeatherForecast":
         return {}
     name = parameters.get("name-entity")
