@@ -40,8 +40,14 @@ def processRequest(req):
         return {}
     name = parameters.get("name-entity")
     if name is None:
-        return "Sorry couldn't help !"
-    return "Hello " + name + "!"
+        return {}
+    return {
+        "speech": speech,
+        "displayText": "Hello " + name + "!",
+        # "data": data,
+        # "contextOut": [],
+        "source": "apiai-weather-webhook-sample"
+    }
     #baseurl = "https://query.yahooapis.com/v1/public/yql?"
     #yql_query = makeYqlQuery(req)
     #if yql_query is None:
