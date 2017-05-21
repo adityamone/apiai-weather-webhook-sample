@@ -43,7 +43,7 @@ def processRequest(req):
         return {}
     return {
         "speech": speech,
-        "displayText": "Hello " + name + "!",
+        "displayText": "Hello " + name + " !",
         # "data": data,
         # "contextOut": [],
         "source": "apiai-weather-webhook-sample"
