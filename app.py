@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-from future.standard_library import install_aliases
-install_aliases()
+#from future.standard_library import install_aliases
+#install_aliases()
 
 from urllib.parse import urlparse, urlencode
 from urllib.request import urlopen, Request
@@ -11,9 +11,12 @@ from urllib.error import HTTPError
 import json
 import os
 
+import hard_coded_request
+
 from flask import Flask
 from flask import request
 from flask import make_response
+from flask_sqlalchemy import SQLAlchemy
 
 # Flask app should start in global layout
 app = Flask(__name__)
@@ -34,18 +37,56 @@ def webhook():
     r.headers['Content-Type'] = 'application/json'
     return r
 
+def parseDates(date_period):
+    start, end = date_period.split('/')
+    return [start, end]
+
+def parametersToSql(queried_table, sort_by, k, date_period=None):
+    sql_base = '''
+    SELECT customer_name FROM {queried_table} ORDER BY
+    {sort_by} DESC LIMIT {k}'''
+
+    sql = sql_base.format(queried_table=queried_table,
+                          sort_by=sort_by,
+                          k=k)
+    if queried_table == 'revenue':
+        if date_period:
+          dates = parseDates(date_period)
+          sql_base = '''
+          SELECT SUM(billed_amount) FROM order
+          WHERE order_date > "{date_period_start}" AND
+                order_date < "{date_period_end}"
+          '''
+          sql = sql_base.format(date_period_start=dates[0],
+                                date_period_end=dates[1])
+        else:
+          sql = '''
+          SELECT SUM(billed_amount) FROM order
+          '''
+
+    return sql
 
 def processRequest(req):
+    parameters = req.get("result").get("parameters")
     if req.get("result").get("action") != "yahooWeatherForecast":
         return {}
     result = req.get("result")
     parameters = result.get("parameters")
-    name = parameters.get("name-entity")
-    if name is None:
-        return {}
+    queried_table = parameters.get("queried_table") or 'customer'
+    sort_by = parameters.get("sort_by") or 'revenue'
+    k = parameters.get("number") or 1
+    date_period = parameters.get("date-period")
+
+    if sort_by == 'number of orders':
+      sort_by = 'orders'
+
+    sql_to_run = parametersToSql(queried_table, sort_by, k,
+                                 date_period=date_period)
+    print(sql_to_run)
+
     return {
-        "speech": "Hello " + name + " !",
-        "displayText": "Hello " + name + " !",
+        "speech": sql_to_run,
+        "displayText": sql_to_run,
         # "data": data,
         # "contextOut": [],
         "source": "apiai-weather-webhook-sample"
@@ -115,5 +156,7 @@ if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
 
     print("Starting app on port %d" % port)
+    processRequest(json.loads(hard_coded_request.THREE_BIGGEST))
+    db = SQLAlchemy()
 
     app.run(debug=False, port=port, host='0.0.0.0')
